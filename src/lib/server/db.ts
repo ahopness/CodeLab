@@ -1,13 +1,17 @@
 import type { D1Database } from '@cloudflare/workers-types';
 
+export interface StatementResult {
+	first<T = any>(): Promise<T | null>;
+	all<T = any>(): Promise<{ results: T[] }>;
+	run(): Promise<{ success: boolean; meta?: any }>;
+}
+
+export interface PreparedStatement extends StatementResult {
+	bind(...params: any[]): StatementResult;
+}
+
 export interface DatabaseClient {
-	prepare(query: string): {
-		bind(...params: any[]): {
-			first<T = any>(): Promise<T | null>;
-			all<T = any>(): Promise<{ results: T[] }>;
-			run(): Promise<{ success: boolean; meta?: any }>;
-		};
-	};
+	prepare(query: string): PreparedStatement;
 }
 
 // Declarações individuais para evitar problemas de split de string em d1.exec()
@@ -222,48 +226,51 @@ export function getDb(platform?: App.Platform): DatabaseClient {
 		const d1 = platform.env.DB;
 		return {
 			prepare(query: string) {
+				const createStatement = (params: any[]): StatementResult => ({
+					async first<T = any>(): Promise<T | null> {
+						try {
+							return await d1.prepare(query).bind(...params).first<T>();
+						} catch (err: any) {
+							if (err?.message?.includes('no such table') || String(err).includes('SQLITE_ERROR')) {
+								await ensureD1Tables(d1);
+								return await d1.prepare(query).bind(...params).first<T>();
+							}
+							throw err;
+						}
+					},
+					async all<T = any>(): Promise<{ results: T[] }> {
+						try {
+							const res = await d1.prepare(query).bind(...params).all<T>();
+							return { results: res.results || [] };
+						} catch (err: any) {
+							if (err?.message?.includes('no such table') || String(err).includes('SQLITE_ERROR')) {
+								await ensureD1Tables(d1);
+								const res = await d1.prepare(query).bind(...params).all<T>();
+								return { results: res.results || [] };
+							}
+							throw err;
+						}
+					},
+					async run(): Promise<{ success: boolean; meta?: any }> {
+						try {
+							const res = await d1.prepare(query).bind(...params).run();
+							return { success: res.success, meta: res.meta };
+						} catch (err: any) {
+							if (err?.message?.includes('no such table') || String(err).includes('SQLITE_ERROR')) {
+								await ensureD1Tables(d1);
+								const res = await d1.prepare(query).bind(...params).run();
+								return { success: res.success, meta: res.meta };
+							}
+							throw err;
+						}
+					}
+				});
+
 				return {
 					bind(...params: any[]) {
-						return {
-							async first<T = any>(): Promise<T | null> {
-								try {
-									return await d1.prepare(query).bind(...params).first<T>();
-								} catch (err: any) {
-									if (err?.message?.includes('no such table') || String(err).includes('SQLITE_ERROR')) {
-										await ensureD1Tables(d1);
-										return await d1.prepare(query).bind(...params).first<T>();
-									}
-									throw err;
-								}
-							},
-							async all<T = any>(): Promise<{ results: T[] }> {
-								try {
-									const res = await d1.prepare(query).bind(...params).all<T>();
-									return { results: res.results || [] };
-								} catch (err: any) {
-									if (err?.message?.includes('no such table') || String(err).includes('SQLITE_ERROR')) {
-										await ensureD1Tables(d1);
-										const res = await d1.prepare(query).bind(...params).all<T>();
-										return { results: res.results || [] };
-									}
-									throw err;
-								}
-							},
-							async run(): Promise<{ success: boolean; meta?: any }> {
-								try {
-									const res = await d1.prepare(query).bind(...params).run();
-									return { success: res.success, meta: res.meta };
-								} catch (err: any) {
-									if (err?.message?.includes('no such table') || String(err).includes('SQLITE_ERROR')) {
-										await ensureD1Tables(d1);
-										const res = await d1.prepare(query).bind(...params).run();
-										return { success: res.success, meta: res.meta };
-									}
-									throw err;
-								}
-							}
-						};
-					}
+						return createStatement(params);
+					},
+					...createStatement([])
 				};
 			}
 		};
@@ -272,23 +279,26 @@ export function getDb(platform?: App.Platform): DatabaseClient {
 	// Fallback em memória para desenvolvimento
 	return {
 		prepare(query: string) {
+			const createStatement = (params: any[]): StatementResult => ({
+				async first<T = any>(): Promise<T | null> {
+					const results = executeMemoryQuery(query, params);
+					return results.length > 0 ? (results[0] as T) : null;
+				},
+				async all<T = any>(): Promise<{ results: T[] }> {
+					const results = executeMemoryQuery(query, params);
+					return { results: results as T[] };
+				},
+				async run(): Promise<{ success: boolean; meta?: any }> {
+					executeMemoryMutation(query, params);
+					return { success: true };
+				}
+			});
+
 			return {
 				bind(...params: any[]) {
-					return {
-						async first<T = any>(): Promise<T | null> {
-							const results = executeMemoryQuery(query, params);
-							return results.length > 0 ? (results[0] as T) : null;
-						},
-						async all<T = any>(): Promise<{ results: T[] }> {
-							const results = executeMemoryQuery(query, params);
-							return { results: results as T[] };
-						},
-						async run(): Promise<{ success: boolean; meta?: any }> {
-							executeMemoryMutation(query, params);
-							return { success: true };
-						}
-					};
-				}
+					return createStatement(params);
+				},
+				...createStatement([])
 			};
 		}
 	};
@@ -552,6 +562,25 @@ function executeMemoryMutation(query: string, params: any[]) {
 	else if (q.startsWith('DELETE FROM SESSIONS WHERE ID = ?')) {
 		const [id] = params;
 		memoryDb.sessions = memoryDb.sessions.filter((s) => s.id !== id);
+	}
+
+	// DELETE FROM users WHERE id = ?
+	else if (q.startsWith('DELETE FROM USERS WHERE ID = ?')) {
+		const [id] = params;
+		memoryDb.users = memoryDb.users.filter((u) => u.id !== id);
+		memoryDb.sessions = memoryDb.sessions.filter((s) => s.user_id !== id);
+		memoryDb.magic_links = memoryDb.magic_links.filter((m) => m.user_id !== id);
+		memoryDb.classroom_enrollments = memoryDb.classroom_enrollments.filter((ce) => ce.student_id !== id);
+		const teacherClassrooms = memoryDb.classrooms.filter((c) => c.teacher_id === id).map((c) => c.id);
+		memoryDb.classrooms = memoryDb.classrooms.filter((c) => c.teacher_id !== id);
+		memoryDb.classroom_enrollments = memoryDb.classroom_enrollments.filter((ce) => !teacherClassrooms.includes(ce.classroom_id));
+		const lists = memoryDb.exercise_lists.filter((el) => teacherClassrooms.includes(el.classroom_id)).map((el) => el.id);
+		memoryDb.exercise_lists = memoryDb.exercise_lists.filter((el) => !teacherClassrooms.includes(el.classroom_id));
+		const exIds = memoryDb.exercises.filter((ex) => lists.includes(ex.list_id)).map((ex) => ex.id);
+		memoryDb.exercises = memoryDb.exercises.filter((ex) => !lists.includes(ex.list_id));
+		const subIds = memoryDb.submissions.filter((s) => s.student_id === id || exIds.includes(s.exercise_id)).map((s) => s.id);
+		memoryDb.submissions = memoryDb.submissions.filter((s) => s.student_id !== id && !exIds.includes(s.exercise_id));
+		memoryDb.feedbacks = memoryDb.feedbacks.filter((f) => f.teacher_id !== id && !subIds.includes(f.submission_id));
 	}
 
 	// INSERT INTO classrooms

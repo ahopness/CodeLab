@@ -90,6 +90,25 @@
 			</div>
 			<div class="flex items-center gap-6 text-zinc-600">
 				<a href="/politica-de-privacidade" class="hover:underline">Política de Privacidade</a>
+				{#if data.user}
+					<form
+						action="/auth/delete-account"
+						method="POST"
+						onsubmit={(e) => {
+							if (!confirm('Atenção: Tem certeza de que deseja deletar sua conta? Esta ação é irreversível e excluirá permanentemente todos os seus dados.')) {
+								e.preventDefault();
+							}
+						}}
+					>
+						<button
+							type="submit"
+							class="text-zinc-600 hover:text-red-600 transition-colors cursor-pointer hover:underline bg-transparent border-0 p-0 font-normal"
+							title="Deletar permanentemente sua conta"
+						>
+							Deletar conta
+						</button>
+					</form>
+				{/if}
 			</div>
 		</div>
 	</footer>

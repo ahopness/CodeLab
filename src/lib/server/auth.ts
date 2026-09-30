@@ -186,3 +186,120 @@ export async function destroySession(
 	}
 	cookies.delete(SESSION_COOKIE, { path: '/' });
 }
+
+export async function deleteUserAccount(
+	platform: App.Platform | undefined,
+	cookies: Cookies,
+	userId: string,
+	role: 'aluno' | 'professor'
+): Promise<void> {
+	const db = getDb(platform);
+
+	try {
+		await db.prepare('PRAGMA foreign_keys = ON;').run();
+	} catch {
+		// Ignora se o driver não suportar PRAGMA dinâmico
+	}
+
+	if (role === 'professor') {
+		// 1. Remove feedbacks pedagógicos emitidos pelo professor
+		await db.prepare('DELETE FROM feedbacks WHERE teacher_id = ?').bind(userId).run();
+
+		// 2. Remove feedbacks em submissões das turmas pertencentes ao professor
+		await db
+			.prepare(
+				`DELETE FROM feedbacks 
+				 WHERE submission_id IN (
+					SELECT s.id 
+					FROM submissions s 
+					JOIN exercises e ON e.id = s.exercise_id 
+					JOIN exercise_lists el ON el.id = e.list_id 
+					JOIN classrooms c ON c.id = el.classroom_id 
+					WHERE c.teacher_id = ?
+				 )`
+			)
+			.bind(userId)
+			.run();
+
+		// 3. Remove submissões feitas nos exercícios das turmas do professor
+		await db
+			.prepare(
+				`DELETE FROM submissions 
+				 WHERE exercise_id IN (
+					SELECT e.id 
+					FROM exercises e 
+					JOIN exercise_lists el ON el.id = e.list_id 
+					JOIN classrooms c ON c.id = el.classroom_id 
+					WHERE c.teacher_id = ?
+				 )`
+			)
+			.bind(userId)
+			.run();
+
+		// 4. Remove exercícios das turmas do professor
+		await db
+			.prepare(
+				`DELETE FROM exercises 
+				 WHERE list_id IN (
+					SELECT el.id 
+					FROM exercise_lists el 
+					JOIN classrooms c ON c.id = el.classroom_id 
+					WHERE c.teacher_id = ?
+				 )`
+			)
+			.bind(userId)
+			.run();
+
+		// 5. Remove listas de exercícios das turmas do professor
+		await db
+			.prepare(
+				`DELETE FROM exercise_lists 
+				 WHERE classroom_id IN (
+					SELECT id FROM classrooms WHERE teacher_id = ?
+				 )`
+			)
+			.bind(userId)
+			.run();
+
+		// 6. Remove matrículas de alunos nas turmas do professor
+		await db
+			.prepare(
+				`DELETE FROM classroom_enrollments 
+				 WHERE classroom_id IN (
+					SELECT id FROM classrooms WHERE teacher_id = ?
+				 )`
+			)
+			.bind(userId)
+			.run();
+
+		// 7. Remove as turmas criadas pelo professor
+		await db.prepare('DELETE FROM classrooms WHERE teacher_id = ?').bind(userId).run();
+	}
+
+	// 8. Remove feedbacks vinculados a submissões deste usuário (caso tenha submetido como aluno)
+	await db
+		.prepare(
+			`DELETE FROM feedbacks 
+			 WHERE submission_id IN (SELECT id FROM submissions WHERE student_id = ?)`
+		)
+		.bind(userId)
+		.run();
+
+	// 9. Remove submissões do próprio usuário
+	await db.prepare('DELETE FROM submissions WHERE student_id = ?').bind(userId).run();
+
+	// 10. Remove matrículas do próprio usuário
+	await db.prepare('DELETE FROM classroom_enrollments WHERE student_id = ?').bind(userId).run();
+
+	// 11. Remove links mágicos gerados para este usuário
+	await db.prepare('DELETE FROM magic_links WHERE user_id = ?').bind(userId).run();
+
+	// 12. Remove sessões ativas deste usuário
+	await db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
+
+	// 13. Remove o registro principal na tabela users
+	await db.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
+
+	// 14. Limpa cookie de sessão no navegador
+	cookies.delete(SESSION_COOKIE, { path: '/' });
+}
