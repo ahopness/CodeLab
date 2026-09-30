@@ -1,5 +1,5 @@
 <div align="center">
-  <p><h2>Codelab</h2></p>
+  <p><h2>CodeLab</h2></p>
   <p><h3>Sua plataforma de aprendizado de programação</h3></p>
   <img width="256" height="256" alt="logo" src="https://github.com/user-attachments/assets/061258a1-c67a-45d7-97b6-a4f6d61d3326" />
   <br><br>
