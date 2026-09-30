@@ -18,29 +18,43 @@
 </div>
 
 ## Funções Principais
-- **LGPD por Design (Zero Retenção de CPF)**: O CPF do participante nunca trafega nem é armazenado nos servidores. O hash unidirecional SHA-256 é computado para garantir a unicidade de presença de forma anônima e irreversível.
-- **Emissão Instantânea de Certificados via Cliente**: Renderização de PDFs em alta fidelidade diretamente no navegador via `pdf-lib`, fundindo metadados do evento, código de autenticidade e dados do participante instantaneamente sem sobrecarga no servidor.
-- **Calibração Visual com Mira Reticular**: Ferramenta interativa de ajuste milimétrico para posicionar campos (nome do participante, data, autenticação e carga horária) sobre o template PDF do certificado.
-- **Credenciamento Ágil via QR Code**: Validação pontual de presenças para eventos presenciais com controle de janela temporal de tolerância (±15 minutos em relação ao horário do evento).
-- **Autenticação Passwordless Segura (Magic Links)**: Acesso administrativo sem senhas via tokens criptográficos descartáveis de uso único enviados por e-mail com a API do Resend e sessões assinadas com HMAC via cookies `HttpOnly`.
-- **Exportação Segura de Listas de Presença**: Download de relatórios em formato CSV sanitizado contra vulnerabilidades de injeção de fórmulas (*CSV Formula Injection*).
-- **Arquitetura Serverless de Custo Zero**: Implementação nativa sobre a infraestrutura da Cloudflare (Pages, Cloudflare D1 SQLite e Cloudflare R2 Object Storage), com suporte a fallback local via Node 24 SQLite.
-// COLOCAR MAIS AQUI
+- **Execução e Interpretação C99 no Cliente**: Interpretação de código C99 isolada em Web Worker no navegador via JSCPP, com timeout de 5 segundos contra loops infinitos e sem consumo de CPU no servidor.
+- **Workspace Editorial em 2 Colunas**: Divisão ergonômica com enunciado e vídeo na coluna esquerda, e editor CodeMirror C99, terminal de saída, entrada padrão (`stdin`) e verificação automática com a saída esperada na coluna direita.
+- **Inscrição de Turmas por PIN de 6 Dígitos**: Sistema ágil de matrícula em que estudantes entram nas turmas informando o código PIN numérico gerado pelo professor.
+- **Listas de Exercícios com Vídeo de Apoio**: Cadastro modular de exercícios com suporte a saídas esperadas para correção e vídeos explicativos hospedados no Cloudflare R2 ou links externos.
+- **Revisão Docente e Feedback por E-mail**: Painel do professor com histórico de submissões, comparação de stdout e envio de orientações pedagógicas por e-mail diretamente via Resend API.
+- **Controle de Submissão Única (Upsert)**: Cada estudante mantém apenas 1 submissão registrada por questão, permitindo reenvio e correções contínuas sem duplicar registros no banco de dados.
+- **Autenticação Passwordless Segura (Magic Links)**: Acesso sem senhas por tokens descartáveis temporários enviados por e-mail e cookies de sessão `HttpOnly` com separação de perfis (Estudante e Professor/Monitor).
+- **Arquitetura Serverless de Custo Zero**: Operação completa sobre a infraestrutura da Cloudflare (Pages, Cloudflare D1 SQLite e Cloudflare R2 Object Storage).
 
 ## Diretórios do Projeto
-```
-
+```text
+.
+├── .agents/          # Documentação técnica e diretrizes de arquitetura
+├── migrations/       # Migrações SQL do Cloudflare D1
+├── src/
+│   ├── lib/
+│   │   ├── components/   # Componentes da interface (ex: C99Workspace)
+│   │   └── server/       # Módulos de backend (auth, db, email, r2)
+│   ├── routes/           # Rotas do SvelteKit (auth, turmas, professor, api)
+│   ├── app.css           # Estilos globais e Tailwind CSS
+│   └── hooks.server.ts   # Interceptador de sessão e controle de rotas
+├── static/           # Ativos públicos, bibliotecas locais (CodeMirror, JSCPP) e ícones
+├── wrangler.toml     # Configuração de bindings D1, R2 e variáveis públicas
+└── package.json
 ```
 
 ## Tecnologias e Bibliotecas
 
-| Tecnologia / Biblioteca | Finalidade no Vellum |
+| Tecnologia / Biblioteca | Finalidade no CodeLab |
 |---|---|
 | **SvelteKit 2 & Svelte 5 (Runes)** | Framework reativo de alta performance com arquitetura baseada em Runes (`$state`, `$derived`, `$props`). |
-| **Tailwind CSS v4** | Estilização utilitária de última geração configurada para a estética editorial *anti-card*. |
-| **Cloudflare Pages & Workers** | Hospedagem *edge serverless* de latência ultrabaixa e escalabilidade sob demanda com custo zero. |
-| **Cloudflare D1 (SQLite)** | Banco de dados relacional distribuído com suporte a migrações automáticas e fallback para `node:sqlite`. |
-| **Cloudflare R2 Storage** | Armazenamento de objetos compatível com S3 para logos institucionais e templates de certificados. |
+| **Tailwind CSS** | Estilização utilitária configurada para a estética acadêmica editorial *anti-card*. |
+| **Cloudflare Pages & Workers** | Hospedagem *edge serverless* de latência ultrabaixa e custo zero de execução. |
+| **Cloudflare D1 (SQLite)** | Banco de dados relacional distribuído para armazenamento de usuários, turmas, exercícios e submissões. |
+| **Cloudflare R2 Storage** | Armazenamento de objetos compatível com S3 para imagens de turmas e vídeos de resolução. |
+| **JSCPP & CodeMirror** | Editor de código com realce de sintaxe C99 e interpretação no navegador sem necessidade de backend de compilação. |
+| **Resend API** | Envio de links mágicos de autenticação e feedbacks pedagógicos por e-mail. |
 
 ## Ambiente e Execução Local
 
@@ -53,10 +67,20 @@
 Para a execução local e publicação na Cloudflare Pages, configure as variáveis de ambiente necessárias. Em ambiente de desenvolvimento local, crie um arquivo `.env` na raiz do projeto baseado no exemplo abaixo:
 
 ```env
-
+# Exemplo de variáveis secretas (.env)
+RESEND_API_KEY="re_123456789"
+AUTH_SECRET="your-32-character-secret-key-goes-here"
+R2_ACCESS_KEY_ID=""
+R2_SECRET_ACCESS_KEY=""
+R2_ACCOUNT_ID=""
 ```
 
 ### Variáveis no Cloudflare Pages (Produção)
-No painel da Cloudflare (*Settings > Environment Variables* do projeto Pages):
+No painel da Cloudflare (*Settings > Environment Variables* do projeto Pages), declare as variáveis secretas:
+- `RESEND_API_KEY`: Chave de API do Resend para envio dos e-mails.
+- `AUTH_SECRET`: Chave secreta de alta entropia para assinatura e validação das sessões.
+- `R2_ACCESS_KEY_ID`: ID da chave de acesso do Cloudflare R2.
+- `R2_SECRET_ACCESS_KEY`: Chave secreta de acesso do Cloudflare R2.
+- `R2_ACCOUNT_ID`: Identificador da conta Cloudflare para operações no bucket R2.
 
 As configurações de banco de dados (`d1_databases`) e bucket de arquivos (`r2_buckets`) estão declaradas no arquivo `wrangler.toml`.
