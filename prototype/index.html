@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C99 CodeLab — Editor & Executor C no Navegador</title>
+  
+  <!-- CodeMirror CSS Local -->
+  <link rel="stylesheet" href="./lib/codemirror.min.css">
+  <link rel="stylesheet" href="./lib/dracula.min.css">
+  
+  <!-- Estilos da Aplicação -->
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo-icon">&lt;C/&gt;</span>
+        <div class="brand-text">
+          <h1>C99 CodeLab</h1>
+          <span class="badge-tag">100% Client-Side • Custo R$ 0,00</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <label for="example-select" class="visually-hidden">Exemplo</label>
+        <select id="example-select" class="select-input">
+          <option value="hello">Exemplo 1: Olá Mundo (printf)</option>
+          <option value="scanf">Exemplo 2: Leitura de Dados (scanf)</option>
+          <option value="loop">Exemplo 3: Laços e Condicionais</option>
+          <option value="pointers">Exemplo 4: Vetores e Ponteiros</option>
+          <option value="recursion">Exemplo 5: Matrizes e Recursão</option>
+          <option value="benchmark">Exemplo 6: Teste Geral (Algoritmos e Análise)</option>
+        </select>
+
+        <button id="btn-reset" class="btn btn-secondary" title="Restaurar código inicial">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Resetar
+        </button>
+
+        <button id="btn-clear-output" class="btn btn-secondary" title="Limpar terminal de saída">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          Limpar Saída
+        </button>
+
+        <button id="btn-run" class="btn btn-primary" title="Executar código (Ctrl + Enter)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Executar Código
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace (Editor + Terminal) -->
+    <main class="workspace">
+      <!-- Painel Esquerdo: Editor e Entrada stdin -->
+      <section class="panel editor-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="dot"></span>
+            <span>editor.c (C99)</span>
+          </div>
+          <div class="editor-info">
+            <span id="cursor-pos">Linha 1, Coluna 1</span>
+          </div>
+        </div>
+
+        <div class="editor-body">
+          <textarea id="code-editor"></textarea>
+        </div>
+
+        <!-- Seção de Stdin (Entrada do scanf) -->
+        <div class="stdin-container">
+          <div class="stdin-header">
+            <label for="stdin-input">
+              <strong>Entrada Padrão (stdin):</strong>
+              <span class="hint">Dados para alimentar funções como <code>scanf()</code></span>
+            </label>
+          </div>
+          <textarea id="stdin-input" placeholder="Ex: 10 20 (entradas separadas por espaço ou quebra de linha)"></textarea>
+        </div>
+      </section>
+
+      <!-- Painel Direito: Terminal / Saída -->
+      <section class="panel terminal-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="terminal-icon">&gt;_</span>
+            <span>Saída do Programa (stdout / stderr)</span>
+          </div>
+          <div class="status-badge" id="status-indicator">
+            <span class="status-dot"></span>
+            <span class="status-text">Pronto</span>
+          </div>
+        </div>
+
+        <div class="terminal-body" id="terminal-body">
+          <pre id="output-console" class="output-console"><span class="terminal-welcome">// Pressione "Executar Código" (ou Ctrl+Enter) para compilar e rodar seu programa C.</span></pre>
+        </div>
+
+        <div class="terminal-footer">
+          <div class="stat-item">
+            <span class="stat-label">Status:</span>
+            <span id="stat-exit-code" class="stat-value">Aguardando</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Tempo:</span>
+            <span id="stat-time" class="stat-value">—</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Monitor Feedback Helper Modal / Box (Mock de envio para o monitor) -->
+    <footer class="system-footer">
+      <div class="footer-info">
+        <strong>Modo Monitoria:</strong> O código é interpretado integralmente no cliente via JavaScript/WASM, sem requisições a servidores ou custos de infraestrutura.
+      </div>
+      <div class="footer-actions">
+        <button id="btn-export-solution" class="btn btn-ghost" title="Exportar código para envio ao monitor">
+          📋 Copiar Solução Formatada
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Bibliotecas JS Locais -->
+  <script src="./lib/codemirror.min.js"></script>
+  <script src="./lib/clike.min.js"></script>
+  <script src="./lib/closebrackets.min.js"></script>
+  <script src="./lib/JSCPP.es5.min.js"></script>
+
+  <!-- Script Principal -->
+  <script src="./main.js"></script>
+</body>
+</html>

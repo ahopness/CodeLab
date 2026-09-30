@@ -1,0 +1,17 @@
+node_modules/
+.svelte-kit/
+build/
+.wrangler/
+dist/
+.env
+.env.*
+!.env.example
+
+# Local SQLite dev database
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+
+# OS files
+.DS_Store
+Thumbs.db

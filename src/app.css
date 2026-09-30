@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #fafafa;
+  --bg-surface: #ffffff;
+  --border-hairline: #e4e4e7;
+  --border-focus: #71717a;
+  --text-primary: #18181b;
+  --text-muted: #71717a;
+  --text-subtle: #a1a1aa;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Hairline dividers & anti-card rules */
+.hairline-b {
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.hairline-t {
+  border-top: 1px solid var(--border-hairline);
+}
+
+.hairline-r {
+  border-right: 1px solid var(--border-hairline);
+}
+
+.hairline-l {
+  border-left: 1px solid var(--border-hairline);
+}
+
+.hairline-all {
+  border: 1px solid var(--border-hairline);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
