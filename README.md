@@ -29,7 +29,7 @@
 
 ## Diretórios do Projeto
 ```text
-.
+CodeLab/
 ├── .agents/          # Documentação técnica e diretrizes de arquitetura
 ├── migrations/       # Migrações SQL do Cloudflare D1
 ├── src/
