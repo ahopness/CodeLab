@@ -11,9 +11,9 @@ RESEND_FROM_EMAIL = "CodeLab <noreply@codelab.lucasangelo.dev>"
 [[d1_databases]]
 binding = "DB"
 database_name = "codelab-db"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "f4496e17-db09-44e8-be10-dfe533ebbdba"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
 binding = "R2"
-bucket_name = "codelab-media"
+bucket_name = "codelab-storage"
